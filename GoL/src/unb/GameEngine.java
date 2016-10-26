@@ -7,9 +7,10 @@ import java.util.List;
 abstract class GameEngine {
 	/*private*/protected int height;
 	/*private*/protected int width;
+	/*private*/protected int maxStates = 10;
 	/*private*/protected Cell[][] cells;
 	/*private*/protected Statistics statistics;
-
+	PastStates undoStates = new PastStates();
 	/**
 	 * Construtor da classe Environment.
 	 * 
@@ -21,7 +22,8 @@ abstract class GameEngine {
 	 GameEngine(int height, int width, Statistics statistics) {
 		this.height = height;
 		this.width = width;
-
+		undoStates.baseParameters(height, width, maxStates);  
+		
 		cells = new Cell[height][width];
 
 		for (int i = 0; i < height; i++) {
@@ -31,7 +33,7 @@ abstract class GameEngine {
 		}
 		
 		this.statistics = statistics;
-	}
+	} 
 
 	/**
 	 * Calcula uma nova geracao do ambiente. Essa implementacao utiliza o
@@ -48,6 +50,9 @@ abstract class GameEngine {
 	public void nextGeneration() {
 		List<Cell> mustRevive = new ArrayList<Cell>();
 		List<Cell> mustKill = new ArrayList<Cell>();
+		
+		undoStates.add(cells);
+		
 		for (int i = 0; i < height; i++) {
 			for (int j = 0; j < width; j++) {
 				if (shouldRevive(i, j)) {
@@ -79,6 +84,9 @@ abstract class GameEngine {
 	 * @throws InvalidParameterException caso a posicao (i, j) nao seja valida.
 	 */
 	public void makeCellAlive(int i, int j) throws InvalidParameterException {
+		
+		undoStates.add(cells);
+		
 		if(validPosition(i, j)) {
 			cells[i][j].revive();
 			statistics.recordRevive();
@@ -87,7 +95,11 @@ abstract class GameEngine {
 			new InvalidParameterException("Invalid position (" + i + ", " + j + ")" );
 		}
 	}
+	
 	public void killAliveCell(int i, int j) throws InvalidParameterException {
+		
+		undoStates.add(cells);
+		
 		if(validPosition(i, j)) {
 			cells[i][j].kill();
 			statistics.recordKill();
@@ -96,6 +108,14 @@ abstract class GameEngine {
 			new InvalidParameterException("Invalid position (" + i + ", " + j + ")" );
 		}
 	}
+	
+	public void Undo() {
+		
+		if(undoStates.getPast() != null) {
+			cells = undoStates.getPast();
+		}
+	}
+	
 	/**
 	 * Verifica se uma celula na posicao (i, j) estah viva.
 	 * 
